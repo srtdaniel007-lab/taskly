@@ -1,0 +1,49 @@
+# ==========================================================
+# Render Blueprint Deployment Configuration
+# https://render.com/docs/blueprint-spec
+# ==========================================================
+
+services:
+  # Web API & Dashboard Service
+  - type: web
+    name: taskpulse-web
+    env: python
+    region: oregon
+    plan: starter
+    buildCommand: "pip install -r requirements.txt && alembic upgrade head"
+    startCommand: "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+    healthCheckPath: /healthz
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.8
+      - key: ENVIRONMENT
+        value: production
+      - key: DEBUG
+        value: "false"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: taskpulse-db
+          property: connectionString
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: SMTP_FROM_EMAIL
+        value: "TaskPulse <notifications@taskpulse.io>"
+      - key: SMTP_TLS
+        value: "true"
+
+# Managed PostgreSQL Database
+databases:
+  - name: taskpulse-db
+    databaseName: taskpulse
+    user: taskpulse
+    region: oregon
+    plan: free
+    ipAllowList: [] # Allows access only from Render internal network
