@@ -40,6 +40,37 @@
 ## 🏗️ Architecture & Relational Schema
 
 ```text
+trackly/
+├── backend/                  # FastAPI Application Service
+│   ├── alembic/              # Database migration versions & env
+│   ├── alembic.ini           # Alembic config
+│   ├── app/                  # Application source
+│   │   ├── api/              # REST API v1 endpoints
+│   │   ├── core/             # Configuration & security
+│   │   ├── db/               # Async database session & engine
+│   │   ├── models/           # SQLAlchemy models
+│   │   ├── schemas/          # Pydantic v2 schemas
+│   │   ├── services/         # Email & notifications
+│   │   └── main.py           # FastAPI entrypoint
+│   ├── Dockerfile            # Container configuration
+│   ├── requirements.txt      # Python dependencies
+│   └── .env.example          # Environment template
+│
+├── frontend/                 # Static Site SPA
+│   ├── index.html            # Executive Dashboard HTML
+│   ├── app.js                # Alpine.js reactive app logic
+│   ├── config.js             # Runtime Backend API configuration
+│   └── README.md             # Frontend dev notes
+│
+├── render.yaml               # Render Blueprint (Backend Web + Frontend Static + PostgreSQL)
+└── README.md
+```
+
+---
+
+## 🏗️ Relational Schema
+
+```text
 users
 ├── id (UUID, PK)
 ├── email (Unique, Indexed)
@@ -82,78 +113,82 @@ notifications
 
 ## 🚀 Quick Start (Local Development)
 
-### 1. Prerequisites
-- Python 3.10+
-- PostgreSQL (or Render managed PostgreSQL database)
-
-### 2. Clone & Setup Virtual Environment
+### 1. Backend Setup
 ```bash
-git clone https://github.com/your-username/trackly.git
-cd trackly
+cd backend
 
+# Create virtual environment
 python -m venv .venv
-# On Windows:
+# Windows:
 .venv\Scripts\activate
-# On Linux/macOS:
+# Linux/macOS:
 source .venv/bin/activate
 
+# Install dependencies
 pip install -r requirements.txt
-```
 
-### 3. Configure Environment Variables
-Copy `.env.example` to `.env`:
-```bash
+# Configure environment
 cp .env.example .env
-```
-Update `DATABASE_URL` with your PostgreSQL credentials:
-```env
-DATABASE_URL="postgresql+asyncpg://postgres:password@localhost:5432/taskpulse"
-```
 
-### 4. Run Migrations
-```bash
+# Run database migrations
 alembic upgrade head
-```
 
-### 5. Launch the Server
-```bash
+# Start FastAPI server
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
-Open your browser at:
-- **Executive Dashboard:** [http://localhost:8000/](http://localhost:8000/)
-- **Interactive Swagger Docs:** [http://localhost:8000/docs](http://localhost:8000/docs)
+Backend API will be accessible at:
+- **API Spec & Interactive Docs:** [http://localhost:8000/docs](http://localhost:8000/docs)
 - **Health Check:** [http://localhost:8000/healthz](http://localhost:8000/healthz)
+
+### 2. Frontend Setup
+In a new terminal:
+```bash
+cd frontend
+
+# Serve frontend using any static server:
+# Using Python:
+python -m http.server 3000
+
+# Or using Node:
+# npx serve .
+```
+Open [http://localhost:3000](http://localhost:3000) in your browser.
+The frontend is already configured to connect to `http://localhost:8000` or can be adjusted anytime via the **API Settings** button in the header.
 
 ---
 
 ## 🐳 Docker Deployment
 
-Build and run using Docker:
+Build and run the backend using Docker:
 ```bash
-# Build Docker image
-docker build -t taskpulse .
+cd backend
+docker build -t taskpulse-backend .
 
-# Run container with external database
 docker run -p 8000:8000 \
   -e DATABASE_URL="postgresql+asyncpg://user:password@host:5432/dbname" \
   -e SECRET_KEY="your-production-secret-key" \
-  taskpulse
+  taskpulse-backend
 ```
 
 ---
 
-## ☁️ Deploying to Render
+## ☁️ Deploying to Render (Blueprint)
 
-This repository includes a `render.yaml` Blueprint specification.
+This repository includes a monorepo [`render.yaml`](render.yaml) Blueprint that automatically provisions:
+1. **`taskpulse-db`**: A managed PostgreSQL database (free tier).
+2. **`taskpulse-backend`**: A Python Web Service hosting FastAPI, automatically running `alembic upgrade head` and connected to the database.
+3. **`taskpulse-frontend`**: A Render Static Site hosting the Alpine.js/Tailwind SPA with SPA rewrite routes.
 
+### Deployment Steps:
 1. Push this repository to GitHub or GitLab.
 2. In the Render Dashboard, click **New +** $\rightarrow$ **Blueprint**.
-3. Connect your repository.
-4. Render will automatically provision:
-   - **`taskpulse-db`**: A managed PostgreSQL database.
-   - **`taskpulse-web`**: The FastAPI web service running `uvicorn app.main:app --host 0.0.0.0 --port $PORT`.
-   - Auto-runs `alembic upgrade head` on build.
-   - Handles legacy `postgres://` URL translation to `postgresql+asyncpg://` transparently.
+3. Select this repository.
+4. Render will detect the database, backend Web Service, and frontend Static Site in [`render.yaml`](render.yaml).
+5. Click **Apply**.
+6. Once deployed:
+   - Your frontend URL will be: `https://taskpulse-frontend.onrender.com`
+   - Your backend URL will be: `https://taskpulse-backend.onrender.com`
+   - Enter your backend URL in `frontend/config.js` or directly click the **API Status** pill in the frontend header to connect.
 
 ---
 
@@ -179,3 +214,4 @@ This repository includes a `render.yaml` Blueprint specification.
 | `PATCH`| `/api/v1/notifications/{id}/read` | Authenticated | Mark notification read |
 | `POST` | `/api/v1/notifications/read-all` | Authenticated | Mark all notifications read |
 | `GET`  | `/healthz` | Public | Readiness and database probe |
+

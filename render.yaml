@@ -1,13 +1,17 @@
 # ==========================================================
 # Render Blueprint Deployment Configuration
+# Monorepo: Frontend Static Site + Backend FastAPI Web Service
 # https://render.com/docs/blueprint-spec
 # ==========================================================
 
 services:
-  # Web API & Dashboard Service
+  # --------------------------------------------------------
+  # 1. Backend Web Service (FastAPI + SQLAlchemy + Asyncpg)
+  # --------------------------------------------------------
   - type: web
-    name: taskpulse-web
-    env: python
+    name: taskpulse-backend
+    runtime: python
+    rootDir: backend
     region: oregon
     plan: starter
     buildCommand: "pip install -r requirements.txt && alembic upgrade head"
@@ -22,6 +26,8 @@ services:
         value: "false"
       - key: SECRET_KEY
         generateValue: true
+      - key: CORS_ORIGINS
+        value: "*"
       - key: DATABASE_URL
         fromDatabase:
           name: taskpulse-db
@@ -39,7 +45,26 @@ services:
       - key: SMTP_TLS
         value: "true"
 
-# Managed PostgreSQL Database
+  # --------------------------------------------------------
+  # 2. Frontend Static Site (Tailwind CSS + Alpine.js SPA)
+  # --------------------------------------------------------
+  - type: web
+    name: taskpulse-frontend
+    runtime: static
+    rootDir: frontend
+    staticPublishPath: .
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: no-cache
+
+# ----------------------------------------------------------
+# 3. Managed PostgreSQL Database
+# ----------------------------------------------------------
 databases:
   - name: taskpulse-db
     databaseName: taskpulse
