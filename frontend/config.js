@@ -12,6 +12,6 @@
  * which will persist to your browser's localStorage.
  */
 window.__ENV__ = {
-  API_BASE_URL: ""
+  API_BASE_URL: "https://taskly-zk8p.onrender.com"
 };
 
